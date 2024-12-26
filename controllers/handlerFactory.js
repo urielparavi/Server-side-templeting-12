@@ -54,6 +54,7 @@ exports.getOne = (Model, popOptions) =>
   catchAsync(async (req, res, next) => {
     let query = Model.findById(req.params.id);
     // popOptoins => relevant only for tourController to include all reviews on spesific tor
+    // so it will be true in getTour, and false in getReview, getUser
     if (popOptions) query = query.populate(popOptions);
     const doc = await query;
 

@@ -1,0 +1,18 @@
+doctype html 
+html 
+ head
+  title Natours | #{tour} 
+  link(rel='stylesheet', href='css/style.css')
+  link(rel='shortcut icon', type='image/png' href='img/favicon.png')
+
+body
+  //- "Buffered" - code that executed, and the results are sent to the output buffer.
+  h1= tour
+  h2= user.toUpperCase()
+  //- h1 The Park Camper 
+
+  //- "Unbuffered" - code that executed, but the results are not sent to the output buffer.
+  - const x = 9;
+  h2= 2 * x
+
+  p This is just some text

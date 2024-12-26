@@ -122,6 +122,8 @@ const tourSchema = new mongoose.Schema(
 // We create index on MongoDB on the price's field
 // tourSchema.index({ price: 1 });
 tourSchema.index({ price: 1, ratingsAverage: -1 }); // Compound index
+// later we will use unique slug to query for tours, so that the slug will be the most
+// queried field
 tourSchema.index({ slug: 1 }); // Single field index
 
 // In order todo geospatial queries, we need to first attribute an index to the field where the geospatial data
@@ -183,6 +185,8 @@ tourSchema.pre(/^find/, function (next) {
   next();
 });
 
+// We populate the guides info in find query, so instead to see the objectId of the guides, we will
+// see the information that we want - name, email, photo, etc..
 tourSchema.pre(/^find/, function (next) {
   // this => always refers to the current query
   this.populate({

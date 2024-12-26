@@ -19,7 +19,7 @@ const createSendToken = (user, statusCode, res) => {
       Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
     ),
     //  httpOnly: true => This will make it so that the cookie cannot accessed or modified in any way
-    // by the browser to prevent CROSS-SITE-SCRIPTING-ATTACKS
+    // by the browser to prevent CROSS-SITE-SCRIPTING-ATTACKS etc..
     httpOnly: true,
   };
   // secure = true => That the cookie will only be sent on an encrypted connection - HTTPS
@@ -27,7 +27,7 @@ const createSendToken = (user, statusCode, res) => {
 
   res.cookie('jwt', token, cookieOptions);
 
-  // Remove the password from the output
+  // We remove the password from the output because that we select('+password') in login for checking password
   user.password = undefined;
 
   res.status(statusCode).json({
@@ -78,6 +78,28 @@ exports.login = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
+//  OPTION A:
+// We override the value of token in cookie from the token to loggedout because we cant delete the cookie
+// since we using httpOnly: true, so we can't delete it, but we can manipulate it
+// exports.logout = (req, res) => {
+//   res.cookie('jwt', 'loggedout', {
+//     // 10 seconds from now
+//     expires: new Date(Date.now() + 10 * 1000),
+//     // We do not need to set it as secure, because in this case there is no sensitive data
+//     // that anyone can get a hold of
+//     httpOnly: true, // Fot people cannot manipulate the cookie in the browser any way
+//   });
+//   res.status(200).json({ status: 'success' });
+// };
+//  OPTION B:
+// We can use clearCookie instead to delete it
+exports.logout = (req, res) => {
+  res.clearCookie('jwt');
+  res.status(200).json({ status: 'success' });
+};
+
+// So in CSR (restfull api approach) in every sensitive route the token will sent vie the headers and then we verify it
+// but in SSR in every sensitive route the token will taken from the cookies and then we verify it
 exports.protect = catchAsync(async (req, res, next) => {
   // 1) Getting token and check if it's there
   let token;
@@ -85,7 +107,10 @@ exports.protect = catchAsync(async (req, res, next) => {
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
+    // Baerer eyJhbGciOiJIUzI..
     token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt;
   }
 
   if (!token) {
@@ -115,8 +140,43 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
   // GRANT ACCESS TO PROTECTED ROUTE
   req.user = currentUser;
+  res.locals.user = currentUser;
   next();
 });
+
+// Only for rendered pages, no errors
+exports.isLoggedIn = async (req, res, next) => {
+  if (req.cookies.jwt) {
+    try {
+      // 1) Verify token
+      const decoded = await promisify(jwt.verify)(
+        req.cookies.jwt,
+        process.env.JWT_SECRET,
+      );
+      // console.log(decoded);
+
+      // 2) Check if user still exists
+      const currentUser = await User.findById(decoded.id);
+      if (!currentUser) {
+        return next();
+      }
+      // 3) Check if user changed password after the token was issued
+      if (currentUser.changedPasswordAfter(decoded.iat)) {
+        return next();
+      }
+      // THERE IS A LOGGED IN USER
+      // We put the user variable in response locals, so our pug templates will get access to them
+      // and inside of a template there will be a variable called user
+      res.locals.user = currentUser;
+      return next();
+    } catch (err) {
+      // THERE IS NOT A LOGGED IN USER
+      return next();
+    }
+  }
+  // In case there is no cookie, then the next middleware will be called because there is no logged user
+  next();
+};
 
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
@@ -220,7 +280,9 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   user.password = req.body.password;
   user.passwordConfirm = req.body.passwordConfirm;
   await user.save();
-  // User.findByIdAndUpdate() => will NOT work as intended
+  // User.findByIdAndUpdate() => will NOT work as intended because the save middleware will not work
+  // therefore there will be no encryption of the password in database and also the passwordConfirm
+  // will enter the database and we don't need him there just the password
 
   // 4) Log user in, send JWT
   createSendToken(user, 200, res);

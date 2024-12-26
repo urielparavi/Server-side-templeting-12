@@ -12,6 +12,7 @@ exports.aliasTopTours = (req, res, next) => {
 };
 
 exports.getAllTours = factory.getAll(Tour);
+// path: 'review' => for the populate reviews that belong to the specific tour
 exports.getTour = factory.getOne(Tour, { path: 'reviews' });
 exports.createTour = factory.createOne(Tour);
 exports.updateTour = factory.updateOne(Tour);
@@ -151,6 +152,7 @@ exports.getDistances = catchAsync(async (req, res, next) => {
     );
   }
 
+  // Geospatial aggregation
   const distances = await Tour.aggregate([
     {
       // For geospatial aggregation there's only one single stage that exist - geoNear

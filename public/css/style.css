@@ -830,6 +830,7 @@ body {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
+  justify-content: flex-end;
 }
 .footer__nav li {
   margin-left: 1.5rem;
@@ -1219,6 +1220,28 @@ body {
   font-weight: 700;
   max-width: 50rem;
   margin: 0 auto;
+}
+
+/* for signup page */
+.avatar-circle {
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: #7dd56f;
+  text-align: center;
+  border-radius: 50%;
+  margin-right: 1rem;
+  -webkit-border-radius: 50%;
+  -moz-border-radius: 50%;
+}
+
+.initials {
+  position: relative;
+  top: 0.5rem; /* 25% of parent */
+  font-size: 1.6rem;
+  line-height: 1.6rem;
+  color: #444;
+  font-family: inherit;
+  font-weight: bold;
 }
 
 .login-form {

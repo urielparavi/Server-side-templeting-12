@@ -49,14 +49,18 @@ const userSchema = new mongoose.Schema({
 });
 
 /* IMPORTANT => the pre saved middlewares will not work for update/findByIdAndUpdate() etc */
+// The encryption will happend between getting the data and savig it to the database
 userSchema.pre('save', async function (next) {
+  // We encrypt the password field only if it changed/created new, so if the user updating the
+  // email for example, we do not want to encrypt the password again
   // Only run function if password was actually modified
   if (!this.isModified('password')) return next();
 
   // Hash the password with cost of 10
   this.password = await bcrypt.hash(this.password, 10);
 
-  // Delete passwordConfirm field
+  // We delete the passwordConfirm field, because we no longer need this field, since we don't want to persist
+  // it to the database - we needed it only for the validation that we implemented before
   this.passwordConfirm = undefined;
   // 1234 => $2a$10$NDtJtz9pL2WfKwA3ksIRRumjmey.EtIMXqDKhyKsyd1jI7phA4d46 => 1234
   next();
@@ -85,16 +89,20 @@ userSchema.methods.correctPassword = async function (
 };
 
 userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
+  // So passwordChangedAt property exists, is meaning that the user changed his password
   if (this.passwordChangedAt) {
+    // Because we get the changedTimestamp in miliseconds we convert it to seconds like JWTTimestamp
     const changedTimestamp = parseInt(
       this.passwordChangedAt.getTime() / 1000,
+      // We need to specify the base
       10,
     );
 
+    // We compare the time the token was created with the time the password was changed.
     // console.log(JWTTimestamp, changedTimestamp);
     return JWTTimestamp < changedTimestamp; // 100 < 200
   }
-  // False means NOT changed
+  // False means that the password NOT changed
   return false;
 };
 
